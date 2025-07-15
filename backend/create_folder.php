@@ -11,6 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['folder_name'])) {
     $folderName = trim($_POST['folder_name']);
     $userId = $_SESSION['user_id'];
     $parentId = !empty($_POST['parent_id']) ? (int)$_POST['parent_id'] : null;
+    $passwordRaw = $_POST['password'] ?? '';
 
     // Get parent path if any
     $parentPath = '';
@@ -21,7 +22,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['folder_name'])) {
         if ($parentFile) {
             $parentPath = rtrim($parentFile['filepath'], '/') . '/';
         } else {
-            // invalid parent or access denied
             $parentPath = '';
             $parentId = null;
         }
@@ -35,9 +35,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['folder_name'])) {
         mkdir('../' . $folderPath, 0755, true);
     }
 
-    // Insert folder in DB
-    $stmt = $pdo->prepare("INSERT INTO files (user_id, filename, filepath, filetype, filesize, parent_id) VALUES (?, ?, ?, 'folder', 0, ?)");
-    $stmt->execute([$userId, $folderName, $folderPath, $parentId]);
+    // Hash password if provided
+    $passwordHash = null;
+    if (!empty($passwordRaw)) {
+        $passwordHash = password_hash($passwordRaw, PASSWORD_DEFAULT);
+    }
+
+    // Insert folder in DB with password hash
+    $stmt = $pdo->prepare("INSERT INTO files (user_id, filename, filepath, filetype, filesize, parent_id, password) VALUES (?, ?, ?, 'folder', 0, ?, ?)");
+    $stmt->execute([$userId, $folderName, $folderPath, $parentId, $passwordHash]);
 
     header("Location: ../index.php" . ($parentId ? "?folder_id=$parentId" : ''));
     exit;

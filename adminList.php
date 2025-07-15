@@ -273,8 +273,9 @@ if (!isset($_SESSION['user_id'])) {
         </div>
         <?php
         // Fetch admins
-        $pdo = new PDO('mysql:host=localhost;dbname=gestion_documents;charset=utf8', 'root', '');
-        $stmt = $pdo->query("SELECT * FROM users WHERE role LIKE '%admin%' ORDER BY created_at DESC");
+
+      require 'backend/connect.php';
+        $stmt = $pdo->query("SELECT * FROM users WHERE role LIKE '%admin%' OR role LIKE '%user%' ORDER BY created_at DESC");
         $admins = $stmt->fetchAll(PDO::FETCH_ASSOC);
         ?>
 
@@ -397,9 +398,9 @@ if (!isset($_SESSION['user_id'])) {
             <input type="text" id="edit-firstname" name="firstname" class="border w-full p-2 rounded" required>
             <input type="text" id="edit-lastname" name="lastname" class="border w-full p-2 rounded" required>
             <input type="email" id="edit-email" name="email" class="border w-full p-2 rounded" required>
-            <select id="edit-role" name="role" class="border w-full p-2 rounded">
-                <option value="Admin">Administrateur</option>
-                <option value="Super Admin">utilisateur</option>
+            <select id="edit-role" name="role" class="border w-full p-2 rounded" required>
+                <option value="admin">Administrateur</option>
+                <option value="user">utilisateur</option>
             </select>
             <div class="flex justify-end">
                 <button type="submit" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">Mettre à jour</button>

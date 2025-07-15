@@ -1,9 +1,10 @@
 <?php
 header('Content-Type: application/json');
 
+// Lire et décoder les données JSON
 $data = json_decode(file_get_contents('php://input'), true);
 
-if (!isset($data['ids']) || !is_array($data['ids'])) {
+if (!isset($data['items']) || !is_array($data['items'])) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'Paramètres invalides']);
     exit;
@@ -11,41 +12,70 @@ if (!isset($data['ids']) || !is_array($data['ids'])) {
 
 require_once 'connect.php';
 
-$ids = $data['ids'];
+$items = $data['items'];
+$idsToDelete = [];
 
-// Préparer une requête SQL sécurisée pour récupérer les fichiers
-$placeholders = implode(',', array_fill(0, count($ids), '?'));
-$stmt = $pdo->prepare("SELECT id, filepath, filetype FROM files WHERE id IN ($placeholders)");
-$stmt->execute($ids);
-$files = $stmt->fetchAll();
+foreach ($items as $item) {
+    $id = $item['id'];
+    $filename= $item['filename'];
 
-if (!$files) {
-    echo json_encode(['success' => false, 'message' => 'Aucun fichier trouvé']);
-    exit;
-}
+    $filetype = $item['filetype'];
+    $passwordInput = trim($item['password'] ?? '');
 
-// Supprimer fichiers/dossiers du disque et base de données
-foreach ($files as $file) {
+    // Récupérer l'entrée dans la BDD
+    $stmt = $pdo->prepare("SELECT id, filepath, filetype, password,filename FROM files WHERE id = ?");
+    $stmt->execute([$id]);
+    $file = $stmt->fetch();
+
+    if (!$file) {
+        echo json_encode(['success' => false, 'message' => "Fichier introuvable (ID: $id)"]);
+        exit;
+    }
+
+    // Vérification du mot de passe si dossier protégé
+    if (!empty($file['password']) && $file['filetype'] === 'folder') {
+        $storedPassword = $file['password'];
+
+        // Vérifier si le mot de passe est haché (commence par $2y$, etc.)
+        if (preg_match('/^\$2[aby]\$/', $storedPassword)) {
+            // Haché
+            if (!password_verify($passwordInput, $storedPassword)) {
+                echo json_encode(['success' => false, 'message' => "Mot de passe incorrect pour le dossier  $filename"]);
+                exit;
+            }
+        } else {
+            // Non haché (texte clair)
+            if ($passwordInput !== $storedPassword) {
+                echo json_encode(['success' => false, 'message' => "Mot de passe incorrect pour le dossier  $filename"]);
+                exit;
+            }
+        }
+    }
+
+    // Supprimer physiquement le fichier/dossier
     $filepath = __DIR__ . '/../' . $file['filepath'];
-
-    // Supprimer fichier ou dossier (fonction à créer selon ton besoin)
     if ($file['filetype'] === 'folder') {
-        // Supprimer dossier récursivement
         deleteFolderRecursive($filepath);
     } else {
         if (file_exists($filepath)) {
             unlink($filepath);
         }
     }
+
+    // Ajouter à la liste à supprimer de la base
+    $idsToDelete[] = $id;
 }
 
 // Supprimer de la base
-$deleteStmt = $pdo->prepare("DELETE FROM files WHERE id IN ($placeholders)");
-$deleteStmt->execute($ids);
+if (!empty($idsToDelete)) {
+    $placeholders = implode(',', array_fill(0, count($idsToDelete), '?'));
+    $deleteStmt = $pdo->prepare("DELETE FROM files WHERE id IN ($placeholders)");
+    $deleteStmt->execute($idsToDelete);
+}
 
 echo json_encode(['success' => true]);
 
-// Fonction récursive pour supprimer un dossier et tout son contenu
+// Fonction récursive de suppression de dossier
 function deleteFolderRecursive($folder) {
     if (!is_dir($folder)) return;
     $files = array_diff(scandir($folder), ['.', '..']);

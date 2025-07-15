@@ -71,6 +71,23 @@ function formatDate($dateString) {
     if (!$timestamp) return '';
     return date('d F Y', $timestamp);
 }
+$userId = $_SESSION['user_id'] ?? null;
+$folderId = isset($_GET['folder_id']) ? (int)$_GET['folder_id'] : null;
+
+if ($folderId) {
+    $stmt = $pdo->prepare("SELECT password FROM files WHERE id = ? AND user_id = ?");
+    $stmt->execute([$folderId, $userId]);
+    $folder = $stmt->fetch();
+
+    if ($folder && !empty($folder['password'])) {
+        // Check if user has access in session
+        if (empty($_SESSION['folder_access'][$folderId])) {
+            // Redirect back to same folder with flag to open password modal
+            header("Location: index.php?folder_id=$folderId&need_password=1");
+            exit;
+        }
+    }
+}
 ?>
 
 
@@ -434,8 +451,13 @@ function formatDate($dateString) {
                     <p class="text-gray-500 col-span-full text-center py-12">Ce dossier est vide.</p>
                 <?php else: ?>
                     <?php foreach ($files as $file): ?>
-                        <div class="relative file-item group">
-                            <!-- Checkbox -->
+                        <div
+                                class="relative file-item group"
+                                data-id="<?= $file['id'] ?>"
+                                data-filename="<?= htmlspecialchars($file['filename']) ?>"
+                                data-filetype="<?= $file['filetype'] ?>"
+                                data-password-protected="<?= !empty($file['password']) ? '1' : '0' ?>"
+                        >                            <!-- Checkbox -->
                             <label class="absolute top-3 left-3 z-10 cursor-pointer">
                                 <input
                                         type="checkbox"
@@ -448,7 +470,7 @@ function formatDate($dateString) {
                             <!-- File / Folder Card -->
                             <div
                                     class="relative h-32 flex flex-col items-center justify-center rounded-lg border border-gray-200 bg-white overflow-hidden cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
-                                    ondblclick="<?= $file['filetype'] === 'folder' ? "location.href='index.php?folder_id={$file['id']}'" : "" ?>"
+                                    ondblclick="<?= $file['filetype'] === 'folder' ? "openFolder({$file['id']})" : "" ?>"
                                     title="<?= htmlspecialchars($file['filename']) ?>"
                             >
                                 <div class="p-4 text-center select-none">
@@ -513,6 +535,63 @@ function formatDate($dateString) {
             </div>
         </div>
 
+        <!-- Folder Password Modal -->
+        <div id="folderPasswordModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50">
+            <div class="bg-white p-6 rounded shadow w-96">
+                <h2 class="text-xl mb-4 font-semibold">Entrez le mot de passe du dossier</h2>
+                <form id="folderPasswordForm" class="space-y-4">
+                    <input type="password" id="folderPasswordInput" placeholder="Mot de passe" required
+                           class="w-full border border-gray-300 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-green-600" />
+                    <div class="flex justify-end space-x-2">
+                        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">Valider</button>
+                        <button type="button" onclick="closeFolderPasswordModal()"
+                                class="px-4 py-2 rounded border border-gray-300 hover:bg-gray-100 transition">Annuler</button>
+                    </div>
+                </form>
+                <p id="folderPasswordError" class="text-red-600 mt-2 hidden">Mot de passe incorrect</p>
+            </div>
+        </div>
+
+        <script>
+            function openFolderPasswordModal(folderId) {
+                document.getElementById('folderPasswordModal').classList.remove('hidden');
+                document.getElementById('folderPasswordModal').classList.add('flex');
+                document.getElementById('folderPasswordForm').dataset.folderId = folderId;
+                document.getElementById('folderPasswordError').classList.add('hidden');
+                document.getElementById('folderPasswordInput').value = '';
+                document.getElementById('folderPasswordInput').focus();
+            }
+
+            function closeFolderPasswordModal() {
+                document.getElementById('folderPasswordModal').classList.remove('flex');
+                document.getElementById('folderPasswordModal').classList.add('hidden');
+            }
+
+            document.getElementById('folderPasswordForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const folderId = this.dataset.folderId;
+                const password = document.getElementById('folderPasswordInput').value;
+
+                const response = await fetch('backend/verify_folder_password.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({folder_id: folderId, password: password})
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Password correct, redirect to folder with access granted flag
+                    window.location.href = 'index.php?folder_id=' + folderId + '&access_granted=1';
+                } else {
+                    // Show error message
+                    document.getElementById('folderPasswordError').classList.remove('hidden');
+                }
+            });
+        </script>
+
+
+
         <!-- Modal Nouveau Dossier -->
         <div id="folderModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50">
             <div class="bg-white p-6 rounded shadow w-96">
@@ -520,6 +599,11 @@ function formatDate($dateString) {
                 <form action="backend/create_folder.php" method="POST" class="space-y-4">
                     <input type="text" name="folder_name" placeholder="Nom du dossier" required
                            class="w-full border border-gray-300 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-green-600" />
+
+                    <!-- Password Field -->
+                    <input type="password" name="password" placeholder="Mot de passe (facultatif)"
+                           class="w-full border border-gray-300 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-green-600" />
+
                     <input type="hidden" name="parent_id" value="<?= $currentFolderId ?? '' ?>">
                     <div class="flex justify-end space-x-2">
                         <button type="submit"
@@ -530,6 +614,7 @@ function formatDate($dateString) {
                 </form>
             </div>
         </div>
+
 
         <!-- Modal Importer fichier -->
         <div id="uploadModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50">
@@ -746,10 +831,21 @@ function formatDate($dateString) {
     });
 
     // Fonction pour simuler l'ouverture d'un dossier
-    function openFolder(folderName) {
-        alert(`Ouverture du dossier : ${folderName}`);
-        // Dans une application réelle, cela naviguerait vers le dossier ou mettrait à jour l'interface pour afficher son contenu
+    function openFolder(folderId) {
+        fetch(`backend/check_folder_password.php?folder_id=${folderId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.password_protected) {
+                    // Folder protected — show password modal
+                    openFolderPasswordModal(folderId);
+                } else {
+                    // Not protected — open folder directly
+                    window.location.href = `index.php?folder_id=${folderId}`;
+                }
+            })
+            .catch(() => alert('Erreur lors de la vérification du dossier'));
     }
+
     // Télécharger les fichiers sélectionnés
     document.addEventListener('DOMContentLoaded', function() {
         const fileCheckboxes = document.querySelectorAll('.file-checkbox');
@@ -804,34 +900,9 @@ function formatDate($dateString) {
     });
 
     // Supprimer les fichiers sélectionnés
-    deleteBtn.addEventListener('click', async () => {
-        if (!confirm('Êtes-vous sûr de vouloir supprimer les fichiers sélectionnés ?')) return;
-
-        for (const fileItem of selectedFiles) {
-            const filename = fileItem.dataset.filename;
-
-            const response = await fetch('backend/delete.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `filename=${encodeURIComponent(filename)}`
-            });
-
-            const data = await response.json();
-            if (data.success) {
-                // Supprimer l’élément de la grille
-                fileItem.remove();
-            } else {
-                alert(`Erreur lors de la suppression de ${filename}`);
-            }
-        }
-
-        // Vider la sélection et mettre à jour l’interface
-        selectedFiles = [];
-        updateActionButtons();
-    });
 
 
-</script>
+        </script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const btn = document.getElementById('userDropdownBtn');
@@ -851,48 +922,79 @@ function formatDate($dateString) {
 
 
         <script>
+            document.getElementById('deleteBtn').addEventListener('click', async function () {
+                const selectedCheckboxes = Array.from(document.querySelectorAll('.file-checkbox:checked'));
+                if (selectedCheckboxes.length === 0) return;
 
-            document.getElementById('deleteBtn').addEventListener('click', function() {
-                // Récupérer les IDs sélectionnés
-                const selectedIds = Array.from(document.querySelectorAll('.file-checkbox:checked'))
-                    .map(checkbox => checkbox.value);
+                const confirmResult = await Swal.fire({
+                    title: 'Confirmer la suppression',
+                    text: `Voulez-vous vraiment supprimer ${selectedCheckboxes.length} élément(s) ?`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Oui, supprimer',
+                    cancelButtonText: 'Annuler'
+                });
 
-                if (selectedIds.length === 0) return;
+                if (!confirmResult.isConfirmed) return;
 
-                if (!confirm(`Voulez-vous vraiment supprimer ${selectedIds.length} élément(s) ?`)) {
-                    return;
+                const itemsToDelete = [];
+
+                for (const checkbox of selectedCheckboxes) {
+                    const fileItem = checkbox.closest('.file-item');
+                    const id = checkbox.value;
+                    const filename = fileItem.dataset.filename;
+                    const filetype = fileItem.dataset.filetype;
+                    const isPasswordProtected = fileItem.dataset.passwordProtected === '1';
+
+                    let password = null;
+
+                    if (filetype === 'folder' && isPasswordProtected) {
+                        const { value: userPassword } = await Swal.fire({
+                            title: `Mot de passe requis`,
+                            text: `Le dossier "${filename}" est protégé. Entrez le mot de passe pour le supprimer :`,
+                            input: 'password',
+                            inputPlaceholder: 'Mot de passe',
+                            inputAttributes: { autocapitalize: 'off', autocorrect: 'off' },
+                            showCancelButton: true,
+                            confirmButtonText: 'Valider',
+                            cancelButtonText: 'Annuler'
+                        });
+
+                        if (!userPassword) {
+                            await Swal.fire('Suppression annulée', '', 'info');
+                            return;
+                        }
+
+                        password = userPassword.trim();
+                    }
+
+                    itemsToDelete.push({ id, filename, filetype, password });
                 }
 
-                // Envoi POST vers backend pour supprimer
-                fetch('backend/delete_files.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ids: selectedIds }),
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert('Suppression réussie');
-                            // Option 1: recharger la page
-                            window.location.reload();
-
-                            // Option 2: supprimer les éléments du DOM sans recharger (plus avancé)
-                            // selectedIds.forEach(id => {
-                            //    const item = document.querySelector(`.file-checkbox[value="${id}"]`).closest('.file-item');
-                            //    if(item) item.remove();
-                            // });
-                            // updateActionButtons();
-                        } else {
-                            alert('Erreur lors de la suppression : ' + (data.message || ''));
-                        }
-                    })
-                    .catch(error => {
-                        alert('Erreur réseau : ' + error.message);
+                // Envoyer la requête de suppression
+                try {
+                    const response = await fetch('backend/delete_files.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ items: itemsToDelete })
                     });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        await Swal.fire('Suppression réussie', '', 'success');
+                        window.location.reload();
+                    } else {
+                        await Swal.fire('Erreur', data.message || 'Erreur lors de la suppression.', 'error');
+                    }
+                } catch (error) {
+                    await Swal.fire('Erreur réseau', error.message, 'error');
+                }
             });
-
-
         </script>
+
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 
 </body>
 </html>
