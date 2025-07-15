@@ -1,8 +1,7 @@
 <?php
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $pdo = new PDO('mysql:host=localhost;dbname=gestion_documents;charset=utf8', 'root', '');
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+require_once '../connect.php'; // inclure sans l’assigner à $pdo
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt = $pdo->prepare("UPDATE users SET firstname=?, lastname=?, email=?, role=? WHERE id=?");
     $stmt->execute([
         $_POST['firstname'],
@@ -12,6 +11,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_POST['id']
     ]);
 
-    header('Location: ../adminList.php'); // Adjust path as needed
+    header('Location: ../adminList.php?updated=1');
     exit();
 }

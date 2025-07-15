@@ -14,6 +14,8 @@ if (!isset($_SESSION['user_id'])) {
     <title>DAS | Gestionnaire de fichiers</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <style>
         /* Barre de défilement personnalisée */
         ::-webkit-scrollbar {
@@ -302,8 +304,8 @@ if (!isset($_SESSION['user_id'])) {
                         <input name="email" required type="email" placeholder="Email" class="border w-full p-2 rounded">
                         <input name="password" required type="password" placeholder="Mot de passe" class="border w-full p-2 rounded">
                         <select name="role" class="border w-full p-2 rounded">
-                            <option value="Admin">Administrateur</option>
-                            <option value="Super Admin">utilisateur</option>
+                            <option value="admin">Administrateur</option>
+                            <option value="user">utilisateur</option>
                         </select>
                         <div class="flex justify-end">
                             <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Ajouter</button>
@@ -356,9 +358,11 @@ if (!isset($_SESSION['user_id'])) {
                                         class="text-blue-600 hover:text-blue-900 mr-3">
                                     <i class="fas fa-edit"></i> Modifier
                                 </button>
-                                <form action="backend/supprimer_admin.php" method="POST" class="inline" onsubmit="return confirm('Confirmer la suppression ?');">
+                                <form action="backend/supprimer_admin.php" method="POST" class="inline delete-form">
                                     <input type="hidden" name="id" value="<?= $id ?>">
-                                    <button class="text-red-600 hover:text-red-900"><i class="fas fa-trash-alt"></i> Supprimer</button>
+                                    <button type="submit" class="text-red-600 hover:text-red-900">
+                                        <i class="fas fa-trash-alt"></i> Supprimer
+                                    </button>
                                 </form>
                             </td>
                         </tr>
@@ -761,8 +765,81 @@ if (!isset($_SESSION['user_id'])) {
             menu.classList.add('hidden');
         });
     });
+    document.querySelectorAll('.delete-form').forEach(form => {
+        form.addEventListener('submit', function (e) {
+            e.preventDefault(); // Empêche la soumission immédiate
+
+            Swal.fire({
+                title: 'Confirmer la suppression ?',
+                text: "Cette action est irréversible.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Oui, supprimer',
+                cancelButtonText: 'Annuler'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit(); // Soumission manuelle après confirmation
+                }
+            });
+        });
+    });
+
 </script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    const urlParams = new URLSearchParams(window.location.search);
 
+    if (urlParams.get('success') === '1') {
+        Swal.fire({
+            icon: 'success',
+            title: 'Succès',
+            text: 'Administrateur ajouté avec succès.',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    }
 
+    if (urlParams.get('error') === 'email') {
+        Swal.fire({
+            icon: 'error',
+            title: 'Adresse e-mail déjà utilisée',
+            text: 'Un compte avec cet e-mail existe déjà.',
+        });
+    }
+
+    if (urlParams.get('error') === 'unknown') {
+        Swal.fire({
+            icon: 'error',
+            title: 'Erreur inconnue',
+            text: 'Une erreur inattendue est survenue.',
+        });
+    }
+
+    // Nettoyer l'URL après affichage
+    if (urlParams.has('success') || urlParams.has('error')) {
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+    }
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+
+        if (urlParams.get('updated') === '1') {
+            Swal.fire({
+                icon: 'success',
+                title: 'Mise à jour réussie',
+                text: 'Les informations de l\'administrateur ont été modifiées.',
+                timer: 2000,
+                showConfirmButton: false
+            });
+
+            const cleanUrl = window.location.origin + window.location.pathname;
+            window.history.replaceState({}, document.title, cleanUrl);
+        }
+    });
+</script>
 </body>
 </html>
