@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : 127.0.0.1
--- Généré le : lun. 14 juil. 2025 à 17:27
+-- Généré le : mar. 15 juil. 2025 à 17:16
 -- Version du serveur : 10.4.32-MariaDB
 -- Version de PHP : 8.2.12
 
@@ -72,8 +72,31 @@ CREATE TABLE `files` (
   `filepath` varchar(255) NOT NULL,
   `filetype` varchar(50) DEFAULT NULL,
   `filesize` bigint(20) DEFAULT NULL,
-  `uploaded_at` datetime DEFAULT current_timestamp()
+  `uploaded_at` datetime DEFAULT current_timestamp(),
+  `parent_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Déchargement des données de la table `files`
+--
+
+INSERT INTO `files` (`id`, `user_id`, `filename`, `filepath`, `filetype`, `filesize`, `uploaded_at`, `parent_id`) VALUES
+(1, 1, 'omar', 'uploads/omar', 'folder', 0, '2025-07-15 02:33:43', NULL),
+(2, 1, 'dasasa', 'uploads/1/dasasa', 'folder', 0, '2025-07-15 02:40:34', NULL),
+(3, 1, 'mounir', 'uploads/1/mounir', 'folder', 0, '2025-07-15 02:41:33', NULL),
+(4, 1, 'adzazd', 'uploads/1/uploads/1/mounir/adzazd', 'folder', 0, '2025-07-15 02:41:44', 3),
+(5, 1, '3-_Apprentissage_Supervise_-_Regression_Lineaire (1).pdf', 'uploads/1/3-_Apprentissage_Supervise_-_Regression_Lineaire (1).pdf', 'application/pdf', 619501, '2025-07-15 02:46:40', NULL),
+(7, 1, '4-_Apprentissage_Supervise_-_K-nearest_Neighbors.rar', 'uploads/1/4-_Apprentissage_Supervise_-_K-nearest_Neighbors.rar', 'application/x-rar', 614917, '2025-07-15 02:51:46', NULL),
+(8, 1, 'no', 'uploads/1/uploads/omar/no', 'folder', 0, '2025-07-15 03:04:00', 1),
+(9, 1, '5-_Apprentissage_Supervise_-_Arbres_de_decision_-_partie-2 (1).pdf', 'uploads/1/uploads/omar/5-_Apprentissage_Supervise_-_Arbres_de_decision_-_partie-2 (1).pdf', 'application/pdf', 804783, '2025-07-15 03:04:13', 1),
+(10, 2, 'sousou14', 'uploads/2/sousou14', 'folder', 0, '2025-07-15 03:20:16', NULL),
+(11, 2, '4-_Apprentissage_Supervise_-_K-nearest_Neighbors.rar', 'uploads/2/4-_Apprentissage_Supervise_-_K-nearest_Neighbors.rar', 'application/x-rar', 614917, '2025-07-15 04:00:46', NULL),
+(12, 1, 'zdazdaz', 'uploads/1/uploads/omar/zdazdaz', 'folder', 0, '2025-07-15 15:40:14', 1),
+(13, 1, 'si haroun', 'uploads/1/si haroun', 'folder', 0, '2025-07-15 15:55:26', NULL),
+(14, 1, 'omarr', 'uploads/1/uploads/1/si haroun/omarr', 'folder', 0, '2025-07-15 15:55:42', 13),
+(15, 1, '3-_Apprentissage_Supervise_-_Regression_Lineaire (1) (1).pdf', 'uploads/1/uploads/1/si haroun/3-_Apprentissage_Supervise_-_Regression_Lineaire (1) (1).pdf', 'application/pdf', 619501, '2025-07-15 15:55:53', 13),
+(17, 1, '5-_Apprentissage_Supervise_-_Arbres_de_decision_-_partie-2 (1) (1).pdf', 'uploads/1/uploads/1/dasasa/5-_Apprentissage_Supervise_-_Arbres_de_decision_-_partie-2 (1) (1).pdf', 'application/pdf', 804783, '2025-07-15 15:56:59', 2),
+(18, 2, 'im here', 'uploads/2/im here', 'folder', 0, '2025-07-15 15:58:11', NULL);
 
 -- --------------------------------------------------------
 
@@ -88,6 +111,18 @@ CREATE TABLE `login_history` (
   `ip_address` varchar(100) DEFAULT NULL,
   `user_agent` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Déchargement des données de la table `login_history`
+--
+
+INSERT INTO `login_history` (`id`, `user_id`, `login_time`, `ip_address`, `user_agent`) VALUES
+(1, 1, '2025-07-15 04:47:30', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36'),
+(2, 1, '2025-07-15 15:39:42', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36'),
+(3, 1, '2025-07-15 15:51:42', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36'),
+(4, 1, '2025-07-15 15:52:29', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36'),
+(5, 2, '2025-07-15 15:58:02', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36'),
+(6, 1, '2025-07-15 15:59:22', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36');
 
 -- --------------------------------------------------------
 
@@ -151,7 +186,8 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `firstname`, `lastname`, `email`, `password`, `role`, `created_at`) VALUES
-(1, 'Omar', 'Test', 'test@test.com', '$2y$10$QDJwGQvNfOWaKdTScXXuOeMPiiZQNdnzVF7h5RgavMjjhaGMLcIbG', 'admin', '2025-07-14 14:29:33');
+(1, 'Omar', 'Test', 'test@test.com', '$2y$10$QDJwGQvNfOWaKdTScXXuOeMPiiZQNdnzVF7h5RgavMjjhaGMLcIbG', 'admin', '2025-07-14 14:29:33'),
+(2, 'syrine', 'benyounes', 'sy@gmail.c', '$2y$10$K1cC1w.822n1OjIfPYp75usSzCz.vAZOTP8KUj4xaObIArTTtwfF6', 'admin', '2025-07-15 03:19:38');
 
 --
 -- Index pour les tables déchargées
@@ -227,13 +263,13 @@ ALTER TABLE `documents`
 -- AUTO_INCREMENT pour la table `files`
 --
 ALTER TABLE `files`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT pour la table `login_history`
 --
 ALTER TABLE `login_history`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT pour la table `produits`
@@ -251,7 +287,7 @@ ALTER TABLE `shared_files`
 -- AUTO_INCREMENT pour la table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- Contraintes pour les tables déchargées
